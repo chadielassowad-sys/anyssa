@@ -1,6 +1,6 @@
-const GATE = "ralph lauren";
+const GATE = "parachute";
 const PEN = "titulaire";
-const CIPHER = "ralph lauren";
+const CIPHER = "parachute";
 
 const STORE_LETTERS = "anyssa.letters";
 const STORE_NOTES = "anyssa.notes";
