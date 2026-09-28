@@ -1,11 +1,19 @@
-Une seule étape pour activer le coffre cloud
-============================================
+Variables (fichier .env à la racine)
+====================================
 
-1. Ouvre : https://supabase.com/dashboard/project/aljasquvpmcespjwnmmb/sql/new
-2. Copie tout le fichier supabase/schema.sql
-3. Colle dans l’éditeur SQL et clique Run
+NEXT_PUBLIC_SUPABASE_URL=https://aljasquvpmcespjwnmmb.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 
-Ensuite les phrases, notes et commentaires sont enregistrés pour Anyssa et toi (carnet).
+Puis : node scripts/gen-config.mjs
+
+Base de données
+===============
+
+Si les tables n’existent pas encore :
+1. https://supabase.com/dashboard/project/aljasquvpmcespjwnmmb/sql/new
+2. Colle supabase/schema.sql → Run
+
+Les phrases, notes et commentaires sont enregistrés pour Anyssa et toi (carnet).
 
 Option avancée (token sbp_…) :
   set SUPABASE_ACCESS_TOKEN=sbp_...

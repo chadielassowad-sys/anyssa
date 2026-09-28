@@ -1,0 +1,7 @@
+{
+  "name": "anyssa",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/gen-config.mjs"
+  }
+}

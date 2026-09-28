@@ -1,5 +1,7 @@
 .env
-.env.*
+.env.local
+.env.*.local
+!.env.example
 scripts/.env
 node_modules/
 package-lock.json
