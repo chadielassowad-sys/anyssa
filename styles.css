@@ -632,6 +632,94 @@ textarea:focus {
   margin-inline: auto;
 }
 
+#ecran-ban.is-active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 24px 18px 40px;
+}
+
+body.ban-actif {
+  overflow: hidden;
+}
+
+.ban-wrap {
+  width: min(520px, 100%);
+  text-align: center;
+}
+
+.ban-visuel {
+  position: relative;
+  margin: 0 auto 10px;
+  width: min(78vw, 320px);
+  animation: ban-shake 0.55s ease 0.15s both;
+}
+
+.ban-visuel img {
+  width: 100%;
+  display: block;
+  border-radius: 22px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.ban-doigt {
+  position: absolute;
+  right: -4px;
+  bottom: 8%;
+  font-size: clamp(2.4rem, 10vw, 3.4rem);
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.45));
+  transform-origin: 70% 80%;
+}
+
+.ban-doigt.is-pop {
+  animation: ban-fuck 0.9s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+.ban-titre {
+  margin: 8px 0 6px;
+  font-size: clamp(2.2rem, 8vw, 3.2rem);
+  line-height: 0.95;
+}
+
+.ban-texte {
+  margin: 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(1.45rem, 4.5vw, 1.9rem);
+  color: var(--or-clair);
+}
+
+.ban-ps {
+  margin: 14px 0 18px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  color: rgba(240, 226, 192, 0.62);
+}
+
+.ban-deban {
+  max-width: 360px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+@keyframes ban-shake {
+  0%,
+  100% { transform: translateX(0); }
+  20% { transform: translateX(-8px) rotate(-1deg); }
+  40% { transform: translateX(8px) rotate(1deg); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(4px); }
+}
+
+@keyframes ban-fuck {
+  0% { transform: scale(0.2) rotate(-30deg); opacity: 0; }
+  45% { transform: scale(1.25) rotate(8deg); opacity: 1; }
+  70% { transform: scale(1) rotate(-6deg); }
+  100% { transform: scale(1.05) rotate(4deg); opacity: 1; }
+}
+
 @keyframes parachute-descend {
   0% { transform: translateX(-50%) translateY(-38%) rotate(-3deg); }
   100% { transform: translateX(-50%) translateY(88%) rotate(3deg); }

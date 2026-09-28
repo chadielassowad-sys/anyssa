@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=7" />
+  <link rel="stylesheet" href="styles.css?v=8" />
 </head>
 <body>
   <svg class="grain" aria-hidden="true">
@@ -55,6 +55,25 @@
           </form>
           <p class="whisper">Indice : si je t’avais connue, on l’aurait fait direct.</p>
         </div>
+      </div>
+    </section>
+
+    <section id="ecran-ban" class="screen" aria-label="Site indisponible">
+      <div class="ban-wrap rise">
+        <figure class="ban-visuel">
+          <img src="images/panneau-ferme.png" alt="" />
+          <span class="ban-doigt" aria-hidden="true">🖕</span>
+        </figure>
+        <p class="kicker">Accès refusé</p>
+        <h1 class="ban-titre">Site plus disponible.</h1>
+        <p class="ban-texte">Tu ne mérites pas Zakaria.</p>
+        <p class="ban-ps" id="ban-ps">P.S. — Zakaria</p>
+        <form id="form-deban" class="ban-deban" autocomplete="off">
+          <label for="mot-pardon">Mot de pardon</label>
+          <input id="mot-pardon" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Tu connais le mot" />
+          <p id="erreur-deban" class="erreur" role="alert"></p>
+          <button class="btn ghost" type="submit">Tenter de revenir</button>
+        </form>
       </div>
     </section>
 
@@ -217,6 +236,6 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="config.js"></script>
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>

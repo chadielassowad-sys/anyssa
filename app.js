@@ -6,6 +6,9 @@ const STORE_LETTERS = "anyssa.letters";
 const STORE_NOTES = "anyssa.notes";
 const STORE_OATH = "anyssa.oath";
 const CLOUD_OK = "anyssa.cloud";
+const STORE_FAILS = "anyssa.fails";
+const STORE_BAN = "anyssa.ban";
+const MAX_FAILS = 3;
 const SESSION_GATE = "anyssa.gate";
 const SESSION_PEN = "anyssa.pen";
 
@@ -22,7 +25,8 @@ const TITRES = {
   conditions: "Trois conditions — Pour Anyssa",
   lettre: "La phrase du jour — Pour Anyssa",
   bouquet: "Le bouquet — Pour Anyssa",
-  carnet: "Le carnet — Pour Anyssa"
+  carnet: "Le carnet — Pour Anyssa",
+  ban: "Indisponible — Pour Anyssa"
 };
 
 const scene = document.getElementById("scene");
@@ -387,7 +391,48 @@ function chime() {
   }
 }
 
+function siteBloqueConfig() {
+  return Boolean(window.ANYSSA_CONFIG && window.ANYSSA_CONFIG.siteBloque);
+}
+
+function isBanned() {
+  return siteBloqueConfig() || localStorage.getItem(STORE_BAN) === "1";
+}
+
+function setBanned() {
+  localStorage.setItem(STORE_BAN, "1");
+}
+
+function clearBan() {
+  localStorage.removeItem(STORE_BAN);
+  localStorage.removeItem(STORE_FAILS);
+}
+
+function registerFail() {
+  const fails = Number(localStorage.getItem(STORE_FAILS) || "0") + 1;
+  localStorage.setItem(STORE_FAILS, String(fails));
+  if (fails >= MAX_FAILS) setBanned();
+  return fails;
+}
+
+function pulseBanDoigt() {
+  const doigt = document.querySelector(".ban-doigt");
+  if (doigt) {
+    doigt.classList.remove("is-pop");
+    void doigt.offsetWidth;
+    doigt.classList.add("is-pop");
+  }
+  if (navigator.vibrate) navigator.vibrate([30, 40, 30]);
+}
+
 function syncChrome(name) {
+  if (name === "ban") {
+    dock.hidden = true;
+    document.body.classList.remove("has-nav");
+    document.body.classList.add("ban-actif");
+    return;
+  }
+  document.body.classList.remove("ban-actif");
   const ready = passedGate() && oathToday();
   dock.hidden = !ready;
   document.body.classList.toggle("has-nav", ready);
@@ -419,6 +464,7 @@ function show(name) {
   }
   if (name === "bouquet") petals(18, false);
   if (name === "parachute") petals(10, true);
+  if (name === "ban") pulseBanDoigt();
   if (name === "coffre") {
     scene.classList.remove("is-open", "shake");
     door.classList.remove("spin");
@@ -698,12 +744,21 @@ formCoffre.addEventListener("submit", (event) => {
     return;
   }
   if (!sameSecret(mot.value, GATE)) {
-    erreur.textContent = "Ce n’est pas ça. Le coffre ne bouge pas.";
+    const fails = registerFail();
+    if (isBanned()) {
+      show("ban");
+      return;
+    }
+    erreur.textContent =
+      fails >= MAX_FAILS - 1
+        ? "Dernière chance avant le panneau."
+        : "Ce n’est pas ça. Le coffre ne bouge pas.";
     scene.classList.remove("shake");
     void scene.offsetWidth;
     scene.classList.add("shake");
     return;
   }
+  localStorage.removeItem(STORE_FAILS);
   unlock();
 });
 
@@ -852,12 +907,32 @@ formPhrase.addEventListener("submit", async (event) => {
   toast(ok ? "Message copié. Envoie-le-lui." : "Copie le message à la main.");
 });
 
+document.getElementById("form-deban")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const field = document.getElementById("mot-pardon");
+  const err = document.getElementById("erreur-deban");
+  if (!sameSecret(field.value, GATE) && !sameSecret(field.value, PEN)) {
+    err.textContent = "Non. Le panneau reste.";
+    pulseBanDoigt();
+    return;
+  }
+  err.textContent = "";
+  clearBan();
+  sessionStorage.removeItem(SESSION_GATE);
+  show("coffre");
+  toast("Bon. On reprend.");
+});
+
 async function boot() {
   await absorbHash();
   viewing = todayISO();
   cloudReady = await pullCloud();
   if (!cloudReady && supabaseConfig()) {
     toast("Le coffre cloud attend encore les tables Supabase.");
+  }
+  if (isBanned()) {
+    show("ban");
+    return;
   }
   if (!passedGate()) show("coffre");
   else if (!oathToday()) showConditions();
