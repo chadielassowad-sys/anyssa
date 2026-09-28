@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07080d" />
+  <meta name="description" content="Un coffre, une phrase par jour, et un bouquet en attendant." />
+  <title>Le coffre — Pour Anyssa</title>
+  <link rel="icon" href="images/coffre.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=3" />
+</head>
+<body>
+  <svg class="grain" aria-hidden="true">
+    <filter id="bruit">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" stitchTiles="stitch" />
+    </filter>
+    <rect width="100%" height="100%" filter="url(#bruit)" />
+  </svg>
+
+  <nav class="dock" id="dock" hidden>
+    <span class="dock-brand">Pour Anyssa</span>
+    <button type="button" data-go="lettre">La phrase</button>
+    <button type="button" data-go="bouquet">Le bouquet</button>
+    <button type="button" data-go="carnet">Le carnet</button>
+    <button type="button" data-go="ecrire">Écrire</button>
+  </nav>
+
+  <main>
+    <section id="ecran-coffre" class="screen is-active" aria-label="Le coffre">
+      <div class="layout rise">
+        <div class="vault-float">
+          <div class="vault-scene" id="scene">
+            <div class="halo" aria-hidden="true"></div>
+            <div class="vault-glow" aria-hidden="true"></div>
+            <div class="door" id="door">
+              <img src="images/coffre.png" alt="Porte ronde d'un coffre-fort, acier bleu nuit et volant de laiton" />
+              <div class="dial" id="cadran" aria-hidden="true"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="intro">
+          <p class="kicker">Pour Anyssa</p>
+          <h1>Le coffre</h1>
+          <p class="lead">Chaque jour, une phrase. Un peu trop sincère, parfois un peu trop directe. Tu la notes sur dix, et tu peux laisser un mot.</p>
+
+          <form id="form-coffre" class="panel" autocomplete="off">
+            <label for="mot-de-passe">Mot de passe</label>
+            <input id="mot-de-passe" type="password" name="secret" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" placeholder="Deux mots" />
+            <p id="erreur-coffre" class="erreur" role="alert"></p>
+            <button class="btn" type="submit" id="ouvrir">Ouvrir le coffre</button>
+          </form>
+          <p class="whisper">Deux mots. Une allure que tu reconnais.</p>
+          <details class="repli">
+            <summary>Tu as reçu un code ?</summary>
+            <form id="form-code-coffre">
+              <label for="code-coffre">Colle-le ici</label>
+              <textarea id="code-coffre" placeholder="Le message de Zakaria"></textarea>
+              <button class="btn ghost" type="submit">Le ranger dans le coffre</button>
+            </form>
+          </details>
+          <button type="button" class="lien discret ecrire-lien" id="ouvrir-ecrire">Écrire la phrase</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="ecran-conditions" class="screen" aria-label="Trois conditions">
+      <div class="wrap etroit rise">
+        <img class="sceau" src="images/sceau.png?v=2" alt="" />
+        <p class="kicker">Avant le secret</p>
+        <h2>Trois conditions</h2>
+        <p class="lead sombre">Rien de solennel. Trois oui, dits pour de vrai. Ensuite seulement, la phrase du jour.</p>
+        <p class="compteur" id="compteur">0 / 3</p>
+
+        <form id="form-conditions">
+          <label class="promise">
+            <input type="checkbox" id="c1" />
+            <span class="coche" aria-hidden="true"></span>
+            <span class="promesse-texte">
+              <span class="promesse-titre">I — Le titulaire</span>
+              <span class="promesse-corps">J’accepte que Zakaria soit le seul titulaire inamovible de ce coffre.</span>
+            </span>
+          </label>
+
+          <label class="promise">
+            <input type="checkbox" id="c2" />
+            <span class="coche" aria-hidden="true"></span>
+            <span class="promesse-texte">
+              <span class="promesse-titre">II — La gêne</span>
+              <span class="promesse-corps">Ne sois pas gênée : tu risquerais d’en mourir.</span>
+            </span>
+          </label>
+
+          <label class="promise">
+            <input type="checkbox" id="c3" />
+            <span class="coche" aria-hidden="true"></span>
+            <span class="promesse-texte">
+              <span class="promesse-titre">III — Le permis</span>
+              <span class="promesse-corps">J’accepte de me motiver pour passer mon permis avant l’été.</span>
+            </span>
+          </label>
+
+          <div class="accepter-bar">
+            <button class="btn" type="submit" id="accepter" disabled>J’accepte les trois</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="ecran-lettre" class="screen" aria-label="La phrase du jour">
+      <div class="wrap etroit rise">
+        <p class="kicker" id="lettre-kicker">Mot secret</p>
+        <h2 id="lettre-titre">La phrase du jour</h2>
+
+        <div class="papier" id="papier">
+          <img class="sceau" src="images/sceau.png?v=2" alt="" />
+          <time id="lettre-date"></time>
+          <blockquote id="lettre-phrase" class="phrase"></blockquote>
+          <div id="lettre-vide" class="vide" hidden>
+            <p>Le mot d’aujourd’hui n’a pas encore été glissé dans le coffre. Il arrive. Les beaux retards existent aussi.</p>
+            <form id="form-code-lettre">
+              <label for="code-lettre">Si tu as reçu un code, colle-le</label>
+              <textarea id="code-lettre" placeholder="Le message de Zakaria"></textarea>
+              <button class="btn sombre" type="submit">Ouvrir ce mot</button>
+            </form>
+          </div>
+
+          <form id="form-note">
+            <p class="label-note">Ta note, sur dix</p>
+            <div class="notes-dix" id="notes-dix" role="group" aria-label="Note sur dix"></div>
+            <p id="deja" class="deja"></p>
+            <label for="commentaire">Un commentaire, si tu veux</label>
+            <textarea id="commentaire" maxlength="400" placeholder="Dis-lui ce que ça t’a fait…"></textarea>
+            <button class="btn sombre" type="submit" id="enregistrer">Enregistrer ma note</button>
+            <button class="btn ghost" type="button" id="partager" hidden>Lui envoyer ma note</button>
+          </form>
+        </div>
+
+        <p class="suite">
+          <button type="button" class="lien" data-go="bouquet">Et pendant ce temps, le bouquet</button>
+          <button type="button" class="lien discret" id="refermer">Refermer le coffre</button>
+        </p>
+      </div>
+    </section>
+
+    <section id="ecran-bouquet" class="screen" aria-label="Le bouquet">
+      <div class="wrap large rise">
+        <div class="bouquet-grid">
+          <figure class="bouquet-visual">
+            <img src="images/bouquet.png" alt="Bouquet de roses crème, pivoines roses et roses bordeaux, noué d’un ruban bleu nuit" />
+          </figure>
+          <div class="bouquet-texte">
+            <p class="kicker">En attendant</p>
+            <h2>Un bouquet, jusqu’à ce que je vienne</h2>
+            <p class="poeme">Tu es loin, et je le sens.</p>
+            <p class="poeme">En attendant de venir te voir, il y a lui : ce bouquet. Il ne remplace pas mes bras. Il tient la place, simplement, jusqu’à ce que je frappe à ta porte.</p>
+            <p class="signature">Zakaria</p>
+            <button type="button" class="lien" data-go="lettre">Retour à la phrase</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="ecran-carnet" class="screen" aria-label="Le carnet">
+      <div class="wrap etroit rise">
+        <p class="kicker">Ce que tu en as pensé</p>
+        <h2>Le carnet</h2>
+        <p class="lead sombre">Toutes les phrases, et la note que tu leur as laissée.</p>
+        <div id="carnet" class="carnet"></div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="ecrire" aria-labelledby="ecrire-titre">
+    <button type="button" class="fermer" id="fermer-ecrire" aria-label="Fermer">×</button>
+    <p class="kicker">La plume</p>
+    <h2 id="ecrire-titre">La phrase du jour</h2>
+
+    <form id="form-titulaire" autocomplete="off">
+      <p class="lead sombre">Réservé à Zakaria.</p>
+      <label for="mot-titulaire">Mot du titulaire</label>
+      <input id="mot-titulaire" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" />
+      <p id="erreur-titulaire" class="erreur" role="alert"></p>
+      <button class="btn" type="submit">Entrer</button>
+    </form>
+
+    <form id="form-phrase" hidden>
+      <p class="lead sombre">Écris la phrase, copie le message, envoie-le-lui. Elle le colle dans le coffre. Le mot de passe et les trois conditions restent obligatoires. Sa note, elle te la renvoie.</p>
+      <label for="date-phrase">Jour</label>
+      <input id="date-phrase" type="date" required />
+      <label for="texte-phrase">La phrase</label>
+      <textarea id="texte-phrase" maxlength="500" required placeholder="Un peu trop sincère, ça suffit."></textarea>
+      <button class="btn" type="submit">Enregistrer et copier le message</button>
+      <label for="lien-phrase">Message à lui envoyer</label>
+      <input id="lien-phrase" type="text" readonly />
+      <div id="plume-liste" class="plume-liste"></div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
