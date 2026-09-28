@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=5" />
+  <link rel="stylesheet" href="styles.css?v=6" />
 </head>
 <body>
   <svg class="grain" aria-hidden="true">
@@ -55,6 +55,19 @@
           </form>
           <p class="whisper">Indice : si je t’avais connue, on l’aurait fait direct.</p>
         </div>
+      </div>
+    </section>
+
+    <section id="ecran-parachute" class="screen" aria-label="Le parachute">
+      <div class="wrap etroit rise">
+        <p class="kicker">Juste avant le contrat</p>
+        <h2 class="parachute-titre">Parachute activé</h2>
+        <div class="parachute-stage" aria-hidden="true">
+          <img class="parachute-sticker" src="images/parachute-sticker.png" alt="Zakaria en parachute, hilare" width="280" height="373" />
+          <p class="parachute-bulle">Bah… au moins je serais mort à tes côtés.</p>
+        </div>
+        <p class="lead sombre parachute-lead">Il rigole. Toi, tu continues.</p>
+        <button type="button" class="btn" id="suite-parachute">Continuer</button>
       </div>
     </section>
 
@@ -193,6 +206,6 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="config.js"></script>
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

@@ -18,6 +18,7 @@ const DEFAULTS = [
 
 const TITRES = {
   coffre: "Le coffre — Pour Anyssa",
+  parachute: "Parachute — Pour Anyssa",
   conditions: "Trois conditions — Pour Anyssa",
   lettre: "La phrase du jour — Pour Anyssa",
   bouquet: "Le bouquet — Pour Anyssa",
@@ -416,6 +417,7 @@ function show(name) {
     });
   }
   if (name === "bouquet") petals(18, false);
+  if (name === "parachute") petals(10, true);
   if (name === "coffre") {
     scene.classList.remove("is-open", "shake");
     door.classList.remove("spin");
@@ -542,7 +544,7 @@ function goAfterGate() {
   if (navigator.vibrate) navigator.vibrate([12, 40, 18]);
   window.setTimeout(() => {
     opening = false;
-    if (!oathToday()) showConditions();
+    if (!oathToday()) show("parachute");
     else show("lettre");
   }, 700);
 }
@@ -762,6 +764,10 @@ document.querySelectorAll(".suite [data-go], .bouquet-texte [data-go]").forEach(
     if (button.dataset.go === "lettre") viewing = todayISO();
     show(button.dataset.go);
   });
+});
+
+document.getElementById("suite-parachute")?.addEventListener("click", () => {
+  showConditions();
 });
 
 document.getElementById("refermer").addEventListener("click", lock);
