@@ -18,7 +18,7 @@ const DEFAULTS = [
 
 const TITRES = {
   coffre: "Le coffre — Pour Anyssa",
-  parachute: "Parachute — Pour Anyssa",
+  parachute: "Le parachute — Pour Anyssa",
   conditions: "Trois conditions — Pour Anyssa",
   lettre: "La phrase du jour — Pour Anyssa",
   bouquet: "Le bouquet — Pour Anyssa",
@@ -62,6 +62,7 @@ let viewing = null;
 let score = null;
 let opening = false;
 let toastTimer = 0;
+let parachuteTimer = 0;
 let cloudLetters = [];
 let cloudNotes = {};
 let cloudReady = false;
@@ -538,13 +539,23 @@ function openWriter() {
   (known ? textePhrase : motTitulaire).focus();
 }
 
+function showParachute() {
+  show("parachute");
+  clearTimeout(parachuteTimer);
+  parachuteTimer = window.setTimeout(() => {
+    if (document.getElementById("ecran-parachute")?.classList.contains("is-active")) {
+      showConditions();
+    }
+  }, 5500);
+}
+
 function goAfterGate() {
   chime();
   petals(14, true);
   if (navigator.vibrate) navigator.vibrate([12, 40, 18]);
   window.setTimeout(() => {
     opening = false;
-    if (!oathToday()) show("parachute");
+    if (!oathToday()) showParachute();
     else show("lettre");
   }, 700);
 }
@@ -766,7 +777,8 @@ document.querySelectorAll(".suite [data-go], .bouquet-texte [data-go]").forEach(
   });
 });
 
-document.getElementById("suite-parachute")?.addEventListener("click", () => {
+document.getElementById("continuer-parachute")?.addEventListener("click", () => {
+  clearTimeout(parachuteTimer);
   showConditions();
 });
 
