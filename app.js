@@ -5,13 +5,14 @@ const CIPHER = "ralph lauren";
 const STORE_LETTERS = "anyssa.letters";
 const STORE_NOTES = "anyssa.notes";
 const STORE_OATH = "anyssa.oath";
+const CLOUD_OK = "anyssa.cloud";
 const SESSION_GATE = "anyssa.gate";
 const SESSION_PEN = "anyssa.pen";
 
 const DEFAULTS = [
   {
     date: "2026-09-28",
-    text: "On m’avait demandé une phrase discrète. Raté. Tu me manques de cette façon calme qui prend toute la pièce, et les kilomètres n’y changent rien."
+    text: "Oui, effectivement, j’ai pris 2h à faire tout ça. Mais réellement, la femme avec qui je parle, elle vaut beaucoup plus que 2h."
   }
 ];
 
@@ -59,6 +60,109 @@ let viewing = null;
 let score = null;
 let opening = false;
 let toastTimer = 0;
+let cloudLetters = [];
+let cloudNotes = {};
+let cloudReady = false;
+let cloudOnline = false;
+
+function supabaseConfig() {
+  const cfg = window.ANYSSA_CONFIG;
+  if (!cfg || !cfg.supabaseUrl || !cfg.supabaseKey) return null;
+  return cfg;
+}
+
+function supabaseRest(path, options = {}) {
+  const cfg = supabaseConfig();
+  if (!cfg) return Promise.resolve(null);
+  const headers = {
+    apikey: cfg.supabaseKey,
+    Authorization: `Bearer ${cfg.supabaseKey}`,
+    Accept: "application/json",
+    ...(options.headers || {})
+  };
+  return fetch(`${cfg.supabaseUrl}/rest/v1/${path}`, { ...options, headers });
+}
+
+async function pullCloud() {
+  const cfg = supabaseConfig();
+  if (!cfg) {
+    cloudOnline = false;
+    return false;
+  }
+
+  try {
+    const [phrasesRes, notesRes] = await Promise.all([
+      supabaseRest("phrases?select=jour,texte&order=jour.desc"),
+      supabaseRest("notes?select=jour,score,commentaire")
+    ]);
+
+    if (!phrasesRes.ok) {
+      cloudOnline = false;
+      if (phrasesRes.status === 404 || phrasesRes.status === 400) {
+        localStorage.removeItem(CLOUD_OK);
+      }
+      return false;
+    }
+
+    const phrases = await phrasesRes.json();
+    cloudLetters = Array.isArray(phrases)
+      ? phrases
+          .filter((row) => row && row.jour && typeof row.texte === "string")
+          .map((row) => ({ date: row.jour, text: row.texte.trim() }))
+      : [];
+
+    cloudNotes = {};
+    if (notesRes.ok) {
+      const notesRows = await notesRes.json();
+      if (Array.isArray(notesRows)) {
+        notesRows.forEach((row) => {
+          if (!row || !row.jour) return;
+          cloudNotes[row.jour] = {
+            score: Number(row.score),
+            comment: typeof row.commentaire === "string" ? row.commentaire : ""
+          };
+        });
+      }
+    }
+
+    cloudOnline = true;
+    localStorage.setItem(CLOUD_OK, "1");
+    return true;
+  } catch {
+    cloudOnline = false;
+    return false;
+  }
+}
+
+async function pushPhrase(date, text) {
+  const body = JSON.stringify({ jour: date, texte: text.trim().slice(0, 500) });
+  const res = await supabaseRest("phrases?on_conflict=jour", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates,return=minimal"
+    },
+    body
+  });
+  return res && res.ok;
+}
+
+async function pushNote(date, note) {
+  const body = JSON.stringify({
+    jour: date,
+    score: note.score,
+    commentaire: (note.comment || "").slice(0, 400)
+  });
+  const res = await supabaseRest("notes?on_conflict=jour", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates,return=minimal"
+    },
+    body
+  });
+  return res && res.ok;
+}
 
 function todayISO() {
   const now = new Date();
@@ -104,24 +208,44 @@ function letters() {
   const map = new Map();
   DEFAULTS.forEach((letter) => map.set(letter.date, letter));
   loadCustom().forEach((letter) => map.set(letter.date, { date: letter.date, text: letter.text.trim() }));
+  cloudLetters.forEach((letter) => map.set(letter.date, { date: letter.date, text: letter.text.trim() }));
   return [...map.values()].sort((a, b) => b.date.localeCompare(a.date));
 }
 
 function notes() {
-  const data = readJSON(STORE_NOTES, {});
-  return data && typeof data === "object" ? data : {};
+  const local = readJSON(STORE_NOTES, {});
+  const merged = local && typeof local === "object" ? { ...local } : {};
+  Object.assign(merged, cloudNotes);
+  return merged;
 }
 
-function saveLetter(date, text) {
+async function saveLetter(date, text) {
+  const trimmed = text.trim().slice(0, 500);
   const next = loadCustom().filter((item) => item.date !== date);
-  next.push({ date, text: text.trim().slice(0, 500) });
+  next.push({ date, text: trimmed });
   localStorage.setItem(STORE_LETTERS, JSON.stringify(next));
+
+  const idx = cloudLetters.findIndex((item) => item.date === date);
+  const entry = { date, text: trimmed };
+  if (idx >= 0) cloudLetters[idx] = entry;
+  else cloudLetters.push(entry);
+
+  if (supabaseConfig()) {
+    const ok = await pushPhrase(date, trimmed);
+    if (ok) cloudOnline = true;
+  }
 }
 
-function saveNote(date, note) {
+async function saveNote(date, note) {
   const all = notes();
   all[date] = note;
   localStorage.setItem(STORE_NOTES, JSON.stringify(all));
+  cloudNotes[date] = note;
+
+  if (supabaseConfig()) {
+    const ok = await pushNote(date, note);
+    if (ok) cloudOnline = true;
+  }
 }
 
 function passedGate() {
@@ -176,19 +300,19 @@ function extractToken(raw) {
   return trimmed.split(/\s+/).find((part) => /^[A-Za-z0-9_-]{16,}$/.test(part)) || "";
 }
 
-function importToken(raw) {
+async function importToken(raw) {
   const token = extractToken(raw);
   if (!token) return null;
   const data = decodePayload(token);
   if (!data) return null;
-  saveLetter(data.date, data.text);
+  await saveLetter(data.date, data.text);
   return data;
 }
 
-function absorbHash() {
+async function absorbHash() {
   if (!location.hash.startsWith("#m=")) return;
   const data = decodePayload(decodeURIComponent(location.hash.slice(3)));
-  if (data) saveLetter(data.date, data.text);
+  if (data) await saveLetter(data.date, data.text);
   history.replaceState(null, "", location.pathname + location.search);
 }
 
@@ -284,8 +408,12 @@ function show(name) {
     }
   });
   document.title = TITRES[name] || TITRES.coffre;
-  if (name === "lettre") renderLetter(viewing || todayISO());
-  if (name === "carnet") renderJournal();
+  if (name === "lettre" || name === "carnet") {
+    pullCloud().finally(() => {
+      if (name === "lettre") renderLetter(viewing || todayISO());
+      if (name === "carnet") renderJournal();
+    });
+  }
   if (name === "bouquet") petals(18, false);
   if (name === "coffre") {
     scene.classList.remove("is-open", "shake");
@@ -382,8 +510,8 @@ function renderWriterList() {
     const meta = document.createElement("p");
     const note = book[letter.date];
     meta.textContent = note
-      ? (note.comment ? `Sur cet appareil : ${note.score}/10 — ${note.comment}` : `Sur cet appareil : ${note.score}/10`)
-      : "Pas encore de note sur cet appareil.";
+      ? (note.comment ? `${note.score}/10 — ${note.comment}` : `${note.score}/10`)
+      : "Pas encore notée.";
     card.append(time, quote, meta);
     plumeListe.appendChild(card);
   });
@@ -486,7 +614,7 @@ formConditions.addEventListener("submit", (event) => {
   show("lettre");
 });
 
-formNote.addEventListener("submit", (event) => {
+formNote.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!score) {
     notesDix.classList.remove("shake");
@@ -495,10 +623,10 @@ formNote.addEventListener("submit", (event) => {
     toast("Choisis une note, de 1 à 10.");
     return;
   }
-  saveNote(viewing, { score, comment: commentaire.value.trim().slice(0, 400) });
+  await saveNote(viewing, { score, comment: commentaire.value.trim().slice(0, 400) });
   deja.textContent = `Tu as noté ${score}/10. Tu peux changer d’avis.`;
   partager.hidden = false;
-  toast("C’est noté.");
+  toast(cloudOnline ? "C’est noté. Zakaria le verra dans le carnet." : "C’est noté.");
   if (score >= 8) petals(22, false);
 });
 
@@ -549,14 +677,16 @@ document.querySelectorAll(".suite [data-go], .bouquet-texte [data-go]").forEach(
 });
 
 document.getElementById("refermer").addEventListener("click", lock);
-document.getElementById("ouvrir-ecrire").addEventListener("click", openWriter);
+document.getElementById("ouvrir-ecrire")?.addEventListener("click", openWriter);
 document.getElementById("fermer-ecrire").addEventListener("click", () => ecrire.close());
 
 function bindImport(formId, fieldId) {
-  document.getElementById(formId).addEventListener("submit", (event) => {
+  const form = document.getElementById(formId);
+  if (!form) return;
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const field = document.getElementById(fieldId);
-    const data = importToken(field.value);
+    const data = await importToken(field.value);
     if (!data) {
       toast("Ce code ne s’ouvre pas.");
       return;
@@ -572,7 +702,7 @@ function bindImport(formId, fieldId) {
       showConditions();
       return;
     }
-    toast("C’est rangé.");
+    toast(cloudOnline ? "C’est rangé dans le coffre cloud." : "C’est rangé.");
     show("lettre");
   });
 }
@@ -602,7 +732,7 @@ formPhrase.addEventListener("submit", async (event) => {
     toast("Le jour et la phrase, tous les deux.");
     return;
   }
-  saveLetter(date, text);
+  await saveLetter(date, text);
   lienPhrase.value = messagePourElle(date, text);
   renderWriterList();
   if (document.getElementById("ecran-lettre").classList.contains("is-active")) renderLetter(viewing || date);
@@ -610,8 +740,16 @@ formPhrase.addEventListener("submit", async (event) => {
   toast(ok ? "Message copié. Envoie-le-lui." : "Copie le message à la main.");
 });
 
-absorbHash();
-viewing = todayISO();
-if (!passedGate()) show("coffre");
-else if (!oathToday()) showConditions();
-else show("lettre");
+async function boot() {
+  await absorbHash();
+  viewing = todayISO();
+  cloudReady = await pullCloud();
+  if (!cloudReady && supabaseConfig()) {
+    toast("Le coffre cloud attend encore les tables Supabase.");
+  }
+  if (!passedGate()) show("coffre");
+  else if (!oathToday()) showConditions();
+  else show("lettre");
+}
+
+boot();

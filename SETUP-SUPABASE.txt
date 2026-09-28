@@ -1,0 +1,12 @@
+Une seule étape pour activer le coffre cloud
+============================================
+
+1. Ouvre : https://supabase.com/dashboard/project/aljasquvpmcespjwnmmb/sql/new
+2. Copie tout le fichier supabase/schema.sql
+3. Colle dans l’éditeur SQL et clique Run
+
+Ensuite les phrases, notes et commentaires sont enregistrés pour Anyssa et toi (carnet).
+
+Option avancée (token sbp_…) :
+  set SUPABASE_ACCESS_TOKEN=sbp_...
+  node scripts/apply-schema.mjs

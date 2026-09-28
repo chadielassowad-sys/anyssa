@@ -53,16 +53,7 @@
             <p id="erreur-coffre" class="erreur" role="alert"></p>
             <button class="btn" type="submit" id="ouvrir">Ouvrir le coffre</button>
           </form>
-          <p class="whisper">Deux mots. Une allure que tu reconnais.</p>
-          <details class="repli">
-            <summary>Tu as reçu un code ?</summary>
-            <form id="form-code-coffre">
-              <label for="code-coffre">Colle-le ici</label>
-              <textarea id="code-coffre" placeholder="Le message de Zakaria"></textarea>
-              <button class="btn ghost" type="submit">Le ranger dans le coffre</button>
-            </form>
-          </details>
-          <button type="button" class="lien discret ecrire-lien" id="ouvrir-ecrire">Écrire la phrase</button>
+          <p class="whisper">Indice : avec quoi je t’ai reconnu.</p>
         </div>
       </div>
     </section>
@@ -133,7 +124,7 @@
             <div class="notes-dix" id="notes-dix" role="group" aria-label="Note sur dix"></div>
             <p id="deja" class="deja"></p>
             <label for="commentaire">Un commentaire, si tu veux</label>
-            <textarea id="commentaire" maxlength="400" placeholder="Dis-lui ce que ça t’a fait…"></textarea>
+            <textarea id="commentaire" maxlength="400"></textarea>
             <button class="btn sombre" type="submit" id="enregistrer">Enregistrer ma note</button>
             <button class="btn ghost" type="button" id="partager" hidden>Lui envoyer ma note</button>
           </form>
@@ -155,8 +146,7 @@
           <div class="bouquet-texte">
             <p class="kicker">En attendant</p>
             <h2>Un bouquet, jusqu’à ce que je vienne</h2>
-            <p class="poeme">Tu es loin, et je le sens.</p>
-            <p class="poeme">En attendant de venir te voir, il y a lui : ce bouquet. Il ne remplace pas mes bras. Il tient la place, simplement, jusqu’à ce que je frappe à ta porte.</p>
+            <p class="poeme">Malheureusement t’es loin, donc impossible de t’offrir un bouquet digne de la femme que tu es. Pour le moment, t’as lui — en attendant le vrai.</p>
             <p class="signature">Zakaria</p>
             <button type="button" class="lien" data-go="lettre">Retour à la phrase</button>
           </div>
@@ -201,6 +191,7 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="app.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
