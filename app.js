@@ -40,6 +40,7 @@ const formNote = document.getElementById("form-note");
 const commentaire = document.getElementById("commentaire");
 const partager = document.getElementById("partager");
 const deja = document.getElementById("deja");
+const demain = document.getElementById("demain");
 const lettreDate = document.getElementById("lettre-date");
 const lettrePhrase = document.getElementById("lettre-phrase");
 const lettreVide = document.getElementById("lettre-vide");
@@ -443,6 +444,12 @@ function paintScore() {
   });
 }
 
+function syncDemain(date, note) {
+  if (!demain) return;
+  const show = date === todayISO() && Boolean(note);
+  demain.hidden = !show;
+}
+
 function renderLetter(date) {
   viewing = date;
   const letter = letters().find((item) => item.date === date);
@@ -459,6 +466,7 @@ function renderLetter(date) {
   commentaire.value = note && note.comment ? note.comment : "";
   deja.textContent = note ? `Tu as noté ${note.score}/10. Tu peux changer d’avis.` : "";
   partager.hidden = !note;
+  syncDemain(date, note);
   paintScore();
 }
 
@@ -701,9 +709,12 @@ formNote.addEventListener("submit", async (event) => {
     return;
   }
   await saveNote(viewing, { score, comment: commentaire.value.trim().slice(0, 400) });
+  const note = { score, comment: commentaire.value.trim().slice(0, 400) };
   deja.textContent = `Tu as noté ${score}/10. Tu peux changer d’avis.`;
   partager.hidden = false;
+  syncDemain(viewing, note);
   toast(cloudOnline ? "C’est noté. Zakaria le verra dans le carnet." : "C’est noté.");
+  if (viewing === todayISO()) petals(14, false);
   if (score >= 8) petals(22, false);
 });
 
