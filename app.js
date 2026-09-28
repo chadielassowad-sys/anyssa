@@ -581,6 +581,83 @@ for (let value = 1; value <= 10; value += 1) {
   notesDix.appendChild(button);
 }
 
+function bindCoffreClavier() {
+  const screen = document.getElementById("ecran-coffre");
+  const vault = screen?.querySelector(".vault-float");
+  const layout = screen?.querySelector(".layout");
+  const vv = window.visualViewport;
+  if (!screen || !vault || !layout || !vv) return;
+
+  let actif = false;
+  let spacer = document.getElementById("vault-spacer");
+  if (!spacer) {
+    spacer = document.createElement("div");
+    spacer.id = "vault-spacer";
+    spacer.hidden = true;
+    spacer.setAttribute("aria-hidden", "true");
+    vault.insertAdjacentElement("afterend", spacer);
+  }
+
+  const mobile = () => window.matchMedia("(max-width: 799px)").matches;
+
+  function calerCoffre() {
+    if (!actif || !mobile()) {
+      vault.classList.remove("is-pinned");
+      vault.style.position = "";
+      vault.style.top = "";
+      vault.style.left = "";
+      vault.style.transform = "";
+      vault.style.width = "";
+      vault.style.zIndex = "";
+      spacer.hidden = true;
+      spacer.style.height = "";
+      return;
+    }
+
+    const haut = vv.offsetTop + 10;
+    const largeur = Math.min(window.innerWidth * 0.48, 200);
+    vault.classList.add("is-pinned");
+    vault.style.position = "fixed";
+    vault.style.left = "50%";
+    vault.style.top = `${haut}px`;
+    vault.style.transform = "translateX(-50%)";
+    vault.style.width = `${largeur}px`;
+    vault.style.zIndex = "6";
+
+    const hauteur = vault.getBoundingClientRect().height || largeur;
+    spacer.hidden = false;
+    spacer.style.height = `${hauteur}px`;
+    spacer.style.width = `${largeur}px`;
+  }
+
+  function ouvrirClavier() {
+    if (!mobile()) return;
+    actif = true;
+    document.body.classList.add("coffre-clavier");
+    window.scrollTo(0, 0);
+    requestAnimationFrame(() => {
+      calerCoffre();
+      window.scrollTo(0, 0);
+    });
+  }
+
+  function fermerClavier() {
+    actif = false;
+    document.body.classList.remove("coffre-clavier");
+    calerCoffre();
+  }
+
+  mot.addEventListener("focus", ouvrirClavier);
+  mot.addEventListener("blur", () => {
+    window.setTimeout(fermerClavier, 80);
+  });
+  vv.addEventListener("resize", calerCoffre);
+  vv.addEventListener("scroll", calerCoffre);
+  window.addEventListener("orientationchange", calerCoffre);
+}
+
+bindCoffreClavier();
+
 mot.addEventListener("input", () => {
   cadran.style.transform = `rotate(${mot.value.length * 38}deg)`;
   if (erreur.textContent) erreur.textContent = "";

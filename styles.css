@@ -846,8 +846,62 @@ dialog::backdrop {
     width: min(68vw, 300px);
   }
 
+  .vault-float.is-pinned {
+    animation: none !important;
+    pointer-events: none;
+  }
+
   #ecran-coffre.is-active {
-    padding: 16px 20px 28px;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: max(12px, env(safe-area-inset-top)) 16px 20px;
+    min-height: 100dvh;
+    min-height: 100svh;
+  }
+
+  body.coffre-clavier {
+    overflow: hidden;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+  }
+
+  body.coffre-clavier #ecran-coffre.is-active {
+    overflow: hidden;
+    height: 100%;
+    max-height: 100dvh;
+    max-height: 100svh;
+  }
+
+  body.coffre-clavier #ecran-coffre .layout {
+    gap: 8px;
+  }
+
+  body.coffre-clavier #ecran-coffre .intro .kicker,
+  body.coffre-clavier #ecran-coffre .intro .lead,
+  body.coffre-clavier #ecran-coffre .whisper,
+  body.coffre-clavier #ecran-coffre .repli,
+  body.coffre-clavier #ecran-coffre .ecrire-lien {
+    display: none;
+  }
+
+  body.coffre-clavier #ecran-coffre .intro h1 {
+    font-size: clamp(2.35rem, 11vw, 3rem);
+    line-height: 0.92;
+    margin-bottom: 2px;
+  }
+
+  body.coffre-clavier #ecran-coffre .panel {
+    margin-top: 8px;
+  }
+
+  #vault-spacer {
+    width: min(68vw, 300px);
+    margin: 0 auto;
+  }
+
+  #vault-spacer[hidden] {
+    display: none;
   }
 
   .layout {
