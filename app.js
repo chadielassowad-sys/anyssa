@@ -541,6 +541,12 @@ function openWriter() {
 
 function showParachute() {
   show("parachute");
+  const sticker = document.querySelector(".chute-sticker");
+  if (sticker) {
+    sticker.style.animation = "none";
+    void sticker.offsetWidth;
+    sticker.style.animation = "";
+  }
   clearTimeout(parachuteTimer);
   parachuteTimer = window.setTimeout(() => {
     if (document.getElementById("ecran-parachute")?.classList.contains("is-active")) {
