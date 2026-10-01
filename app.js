@@ -9,16 +9,25 @@ const CLOUD_OK = "anyssa.cloud";
 const SESSION_GATE = "anyssa.gate";
 const SESSION_PEN = "anyssa.pen";
 
+const AUTHORS = { zakaria: "zakaria", anyssa: "anyssa" };
+
 const DEFAULTS = [
   {
     date: "2026-09-29",
+    author: AUTHORS.zakaria,
     text: "C’est sûr, c’est pas une disquette, mais je tiens à toi. J’sais pas pourquoi ni comment, mais voilà."
   },
   {
     date: "2026-09-28",
+    author: AUTHORS.zakaria,
     text: "Oui, effectivement, j’ai pris 2h à faire tout ça. Mais réellement, la femme avec qui je parle, elle vaut beaucoup plus que 2h."
   }
 ];
+
+const AUTHOR_LABEL = {
+  zakaria: "Zakaria",
+  anyssa: "Anyssa"
+};
 
 const TITRES = {
   coffre: "Le coffre — Pour Anyssa",
@@ -47,7 +56,7 @@ const partager = document.getElementById("partager");
 const deja = document.getElementById("deja");
 const demain = document.getElementById("demain");
 const lettreDate = document.getElementById("lettre-date");
-const lettrePhrase = document.getElementById("lettre-phrase");
+const lettrePhrases = document.getElementById("lettre-phrases");
 const lettreVide = document.getElementById("lettre-vide");
 const lettreTitre = document.getElementById("lettre-titre");
 const carnet = document.getElementById("carnet");
@@ -61,6 +70,10 @@ const datePhrase = document.getElementById("date-phrase");
 const textePhrase = document.getElementById("texte-phrase");
 const lienPhrase = document.getElementById("lien-phrase");
 const plumeListe = document.getElementById("plume-liste");
+const ecrireAnyssa = document.getElementById("ecrire-anyssa");
+const formAnyssaPhrase = document.getElementById("form-anyssa-phrase");
+const dateAnyssa = document.getElementById("date-anyssa");
+const texteAnyssa = document.getElementById("texte-anyssa");
 
 let viewing = null;
 let score = null;
@@ -71,6 +84,7 @@ let cloudLetters = [];
 let cloudNotes = {};
 let cloudReady = false;
 let cloudOnline = false;
+let cloudSupportsAuteur = true;
 
 function supabaseConfig() {
   const cfg = window.ANYSSA_CONFIG;
@@ -90,6 +104,31 @@ function supabaseRest(path, options = {}) {
   return fetch(`${cfg.supabaseUrl}/rest/v1/${path}`, { ...options, headers });
 }
 
+function normalizeAuthor(value) {
+  const clean = typeof value === "string" ? value.trim().toLowerCase() : "";
+  return clean === AUTHORS.anyssa ? AUTHORS.anyssa : AUTHORS.zakaria;
+}
+
+function letterKey(item) {
+  return `${item.date}:${normalizeAuthor(item.author)}`;
+}
+
+function normalizeLetter(item) {
+  if (!item || !/^\d{4}-\d{2}-\d{2}$/.test(item.date) || typeof item.text !== "string") return null;
+  const text = item.text.trim();
+  if (!text) return null;
+  return { date: item.date, author: normalizeAuthor(item.author), text };
+}
+
+function mapPhraseRow(row) {
+  if (!row || !row.jour || typeof row.texte !== "string") return null;
+  return normalizeLetter({
+    date: row.jour,
+    author: row.auteur,
+    text: row.texte
+  });
+}
+
 async function pullCloud() {
   const cfg = supabaseConfig();
   if (!cfg) {
@@ -98,10 +137,18 @@ async function pullCloud() {
   }
 
   try {
-    const [phrasesRes, notesRes] = await Promise.all([
-      supabaseRest("phrases?select=jour,texte&order=jour.desc"),
-      supabaseRest("notes?select=jour,score,commentaire")
-    ]);
+    let phrasesRes = await supabaseRest("phrases?select=jour,texte,auteur&order=jour.desc");
+    if (!phrasesRes.ok) {
+      const body = await phrasesRes.clone().text();
+      if (phrasesRes.status === 400 && body.includes("auteur")) {
+        cloudSupportsAuteur = false;
+        phrasesRes = await supabaseRest("phrases?select=jour,texte&order=jour.desc");
+      }
+    } else {
+      cloudSupportsAuteur = true;
+    }
+
+    const notesRes = await supabaseRest("notes?select=jour,score,commentaire");
 
     if (!phrasesRes.ok) {
       cloudOnline = false;
@@ -113,9 +160,7 @@ async function pullCloud() {
 
     const phrases = await phrasesRes.json();
     cloudLetters = Array.isArray(phrases)
-      ? phrases
-          .filter((row) => row && row.jour && typeof row.texte === "string")
-          .map((row) => ({ date: row.jour, text: row.texte.trim() }))
+      ? phrases.map(mapPhraseRow).filter(Boolean)
       : [];
 
     cloudNotes = {};
@@ -141,16 +186,43 @@ async function pullCloud() {
   }
 }
 
-async function pushPhrase(date, text) {
-  const body = JSON.stringify({ jour: date, texte: text.trim().slice(0, 500) });
-  const res = await supabaseRest("phrases?on_conflict=jour", {
+async function pushPhrase(date, text, author = AUTHORS.zakaria) {
+  const auteur = normalizeAuthor(author);
+  const payload = { jour: date, texte: text.trim().slice(0, 500) };
+  if (cloudSupportsAuteur) payload.auteur = auteur;
+
+  let path = cloudSupportsAuteur ? "phrases?on_conflict=jour,auteur" : "phrases?on_conflict=jour";
+  if (!cloudSupportsAuteur && auteur !== AUTHORS.zakaria) {
+    return false;
+  }
+
+  let res = await supabaseRest(path, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Prefer: "resolution=merge-duplicates,return=minimal"
     },
-    body
+    body: JSON.stringify(payload)
   });
+
+  if (!res.ok && cloudSupportsAuteur) {
+    const errText = await res.text();
+    if (errText.includes("auteur") || errText.includes("42703")) {
+      cloudSupportsAuteur = false;
+      if (auteur !== AUTHORS.zakaria) return false;
+      path = "phrases?on_conflict=jour";
+      delete payload.auteur;
+      res = await supabaseRest(path, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Prefer: "resolution=merge-duplicates,return=minimal"
+        },
+        body: JSON.stringify(payload)
+      });
+    }
+  }
+
   return res && res.ok;
 }
 
@@ -208,15 +280,36 @@ function readJSON(key, fallback) {
 function loadCustom() {
   const data = readJSON(STORE_LETTERS, []);
   if (!Array.isArray(data)) return [];
-  return data.filter((item) => item && /^\d{4}-\d{2}-\d{2}$/.test(item.date) && typeof item.text === "string");
+  return data.map(normalizeLetter).filter(Boolean);
 }
 
 function letters() {
   const map = new Map();
-  DEFAULTS.forEach((letter) => map.set(letter.date, letter));
-  loadCustom().forEach((letter) => map.set(letter.date, { date: letter.date, text: letter.text.trim() }));
-  cloudLetters.forEach((letter) => map.set(letter.date, { date: letter.date, text: letter.text.trim() }));
-  return [...map.values()].sort((a, b) => b.date.localeCompare(a.date));
+  DEFAULTS.forEach((letter) => {
+    const entry = normalizeLetter(letter);
+    if (entry) map.set(letterKey(entry), entry);
+  });
+  loadCustom().forEach((letter) => map.set(letterKey(letter), letter));
+  cloudLetters.forEach((letter) => {
+    const entry = normalizeLetter(letter);
+    if (entry) map.set(letterKey(entry), entry);
+  });
+  return [...map.values()].sort((a, b) => {
+    const byDate = b.date.localeCompare(a.date);
+    if (byDate !== 0) return byDate;
+    return a.author.localeCompare(b.author);
+  });
+}
+
+function phrasesOnDate(date) {
+  const order = [AUTHORS.zakaria, AUTHORS.anyssa];
+  return letters()
+    .filter((item) => item.date === date)
+    .sort((a, b) => order.indexOf(a.author) - order.indexOf(b.author));
+}
+
+function phraseFromZakaria(date) {
+  return phrasesOnDate(date).find((item) => item.author === AUTHORS.zakaria) || null;
 }
 
 function notes() {
@@ -226,19 +319,20 @@ function notes() {
   return merged;
 }
 
-async function saveLetter(date, text) {
+async function saveLetter(date, text, author = AUTHORS.zakaria) {
+  const auteur = normalizeAuthor(author);
   const trimmed = text.trim().slice(0, 500);
-  const next = loadCustom().filter((item) => item.date !== date);
-  next.push({ date, text: trimmed });
+  const entry = { date, author: auteur, text: trimmed };
+  const next = loadCustom().filter((item) => letterKey(item) !== letterKey(entry));
+  next.push(entry);
   localStorage.setItem(STORE_LETTERS, JSON.stringify(next));
 
-  const idx = cloudLetters.findIndex((item) => item.date === date);
-  const entry = { date, text: trimmed };
+  const idx = cloudLetters.findIndex((item) => letterKey(item) === letterKey(entry));
   if (idx >= 0) cloudLetters[idx] = entry;
   else cloudLetters.push(entry);
 
   if (supabaseConfig()) {
-    const ok = await pushPhrase(date, trimmed);
+    const ok = await pushPhrase(date, trimmed, auteur);
     if (ok) cloudOnline = true;
   }
 }
@@ -283,7 +377,7 @@ function decodePayload(token) {
     if (!data || !/^\d{4}-\d{2}-\d{2}$/.test(data.date) || typeof data.text !== "string") return null;
     const text = data.text.trim().slice(0, 500);
     if (!text) return null;
-    return { date: data.date, text };
+    return { date: data.date, text, author: normalizeAuthor(data.author) };
   } catch {
     return null;
   }
@@ -312,14 +406,14 @@ async function importToken(raw) {
   if (!token) return null;
   const data = decodePayload(token);
   if (!data) return null;
-  await saveLetter(data.date, data.text);
+  await saveLetter(data.date, data.text, data.author);
   return data;
 }
 
 async function absorbHash() {
   if (!location.hash.startsWith("#m=")) return;
   const data = decodePayload(decodeURIComponent(location.hash.slice(3)));
-  if (data) await saveLetter(data.date, data.text);
+  if (data) await saveLetter(data.date, data.text, data.author);
   history.replaceState(null, "", location.pathname + location.search);
 }
 
@@ -457,18 +551,36 @@ function syncDemain(date, note) {
   demain.hidden = !show;
 }
 
+function renderPhraseBlock(letter) {
+  const bloc = document.createElement("div");
+  bloc.className = "phrase-bloc";
+  const badge = document.createElement("span");
+  badge.className = `auteur-badge ${letter.author}`;
+  badge.textContent = AUTHOR_LABEL[letter.author] || letter.author;
+  const quote = document.createElement("blockquote");
+  quote.className = "phrase";
+  quote.textContent = letter.text;
+  bloc.append(badge, quote);
+  return bloc;
+}
+
 function renderLetter(date) {
   viewing = date;
-  const letter = letters().find((item) => item.date === date);
+  const dayPhrases = phrasesOnDate(date);
+  const hisPhrase = phraseFromZakaria(date);
   const note = notes()[date];
   const isToday = date === todayISO();
-  lettreTitre.textContent = isToday ? "La phrase du jour" : "Une phrase gardée";
+  const hasAny = dayPhrases.length > 0;
+  lettreTitre.textContent = isToday ? "La phrase du jour" : "Des phrases gardées";
   lettreDate.textContent = formatDate(date);
   lettreDate.dateTime = date;
-  lettrePhrase.hidden = !letter;
-  lettreVide.hidden = Boolean(letter);
-  formNote.hidden = !letter;
-  if (letter) lettrePhrase.textContent = letter.text;
+  lettrePhrases.replaceChildren();
+  if (hasAny) {
+    dayPhrases.forEach((letter) => lettrePhrases.appendChild(renderPhraseBlock(letter)));
+  }
+  lettrePhrases.hidden = !hasAny;
+  lettreVide.hidden = hasAny;
+  formNote.hidden = !hisPhrase;
   score = note ? Number(note.score) : null;
   commentaire.value = note && note.comment ? note.comment : "";
   deja.textContent = note ? `Tu as noté ${note.score}/10. Tu peux changer d’avis.` : "";
@@ -479,36 +591,53 @@ function renderLetter(date) {
 
 function renderJournal() {
   carnet.replaceChildren();
-  const list = letters();
   const book = notes();
-  if (!list.length) {
+  const byDate = new Map();
+  letters().forEach((letter) => {
+    if (!byDate.has(letter.date)) byDate.set(letter.date, []);
+    byDate.get(letter.date).push(letter);
+  });
+  const dates = [...byDate.keys()].sort((a, b) => b.localeCompare(a));
+  if (!dates.length) {
     const empty = document.createElement("p");
     empty.className = "lead sombre";
     empty.textContent = "Le carnet est encore vierge.";
     carnet.appendChild(empty);
     return;
   }
-  list.forEach((letter) => {
+  dates.forEach((date) => {
+    const dayPhrases = phrasesOnDate(date);
     const card = document.createElement("article");
     card.className = "fiche";
     const time = document.createElement("time");
-    time.dateTime = letter.date;
-    time.textContent = formatDate(letter.date);
-    const quote = document.createElement("p");
-    quote.className = "fiche-phrase";
-    quote.textContent = letter.text;
+    time.dateTime = date;
+    time.textContent = formatDate(date);
+    const voices = document.createElement("div");
+    voices.className = "fiche-auteurs";
+    dayPhrases.forEach((letter) => {
+      const voice = document.createElement("div");
+      voice.className = "fiche-voix";
+      const badge = document.createElement("span");
+      badge.className = `auteur-badge ${letter.author}`;
+      badge.textContent = AUTHOR_LABEL[letter.author] || letter.author;
+      const quote = document.createElement("p");
+      quote.className = "fiche-phrase";
+      quote.textContent = letter.text;
+      voice.append(badge, quote);
+      voices.appendChild(voice);
+    });
     const meta = document.createElement("p");
     meta.className = "fiche-meta";
-    const note = book[letter.date];
+    const note = book[date];
     meta.textContent = note
       ? (note.comment ? `${note.score}/10 — ${note.comment}` : `${note.score}/10`)
       : "Pas encore notée";
     const open = document.createElement("button");
     open.type = "button";
     open.className = "lien";
-    open.dataset.date = letter.date;
+    open.dataset.date = date;
     open.textContent = "Ouvrir";
-    card.append(time, quote, meta, open);
+    card.append(time, voices, meta, open);
     carnet.appendChild(card);
   });
 }
@@ -516,7 +645,9 @@ function renderJournal() {
 function renderWriterList() {
   plumeListe.replaceChildren();
   const book = notes();
-  letters().forEach((letter) => {
+  letters()
+    .filter((letter) => letter.author === AUTHORS.zakaria)
+    .forEach((letter) => {
     const card = document.createElement("article");
     const time = document.createElement("time");
     time.textContent = formatDate(letter.date);
@@ -541,6 +672,15 @@ function openWriter() {
   if (known) renderWriterList();
   ecrire.showModal();
   (known ? textePhrase : motTitulaire).focus();
+}
+
+function openAnyssaWriter() {
+  if (!ecrireAnyssa) return;
+  dateAnyssa.value = viewing || todayISO();
+  const mine = phrasesOnDate(dateAnyssa.value).find((item) => item.author === AUTHORS.anyssa);
+  texteAnyssa.value = mine ? mine.text : "";
+  ecrireAnyssa.showModal();
+  texteAnyssa.focus();
 }
 
 function showParachute() {
@@ -776,6 +916,10 @@ dock.addEventListener("click", (event) => {
     openWriter();
     return;
   }
+  if (button.dataset.go === "anyssa") {
+    openAnyssaWriter();
+    return;
+  }
   if (button.dataset.go === "lettre") viewing = todayISO();
   show(button.dataset.go);
 });
@@ -795,6 +939,37 @@ document.getElementById("continuer-parachute")?.addEventListener("click", () => 
 document.getElementById("refermer").addEventListener("click", lock);
 document.getElementById("ouvrir-ecrire")?.addEventListener("click", openWriter);
 document.getElementById("fermer-ecrire").addEventListener("click", () => ecrire.close());
+document.getElementById("fermer-anyssa")?.addEventListener("click", () => ecrireAnyssa?.close());
+
+formAnyssaPhrase?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const date = dateAnyssa.value;
+  const text = texteAnyssa.value.trim();
+  if (!date || !text) {
+    toast("Le jour et ta phrase, tous les deux.");
+    return;
+  }
+  await saveLetter(date, text, AUTHORS.anyssa);
+  ecrireAnyssa.close();
+  if (document.getElementById("ecran-lettre").classList.contains("is-active")) {
+    renderLetter(viewing || date);
+  }
+  if (document.getElementById("ecran-carnet").classList.contains("is-active")) {
+    renderJournal();
+  }
+  toast(
+    cloudOnline
+      ? "Ta phrase est dans le coffre. Il la verra aussi."
+      : cloudSupportsAuteur
+        ? "Ta phrase est enregistrée ici."
+        : "Ta phrase est enregistrée ici. Le cloud attend la migration Supabase (colonne auteur)."
+  );
+});
+
+dateAnyssa?.addEventListener("change", () => {
+  const mine = phrasesOnDate(dateAnyssa.value).find((item) => item.author === AUTHORS.anyssa);
+  texteAnyssa.value = mine ? mine.text : "";
+});
 
 function bindImport(formId, fieldId) {
   const form = document.getElementById(formId);
@@ -848,7 +1023,7 @@ formPhrase.addEventListener("submit", async (event) => {
     toast("Le jour et la phrase, tous les deux.");
     return;
   }
-  await saveLetter(date, text);
+  await saveLetter(date, text, AUTHORS.zakaria);
   lienPhrase.value = messagePourElle(date, text);
   renderWriterList();
   if (document.getElementById("ecran-lettre").classList.contains("is-active")) renderLetter(viewing || date);

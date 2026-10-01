@@ -13,8 +13,14 @@ Si les tables n’existent pas encore :
 1. https://supabase.com/dashboard/project/aljasquvpmcespjwnmmb/sql/new
 2. Colle supabase/schema.sql → Run
 
+Si la table phrases existe déjà (sans colonne auteur) :
+1. Même SQL Editor
+2. Colle supabase/migration-auteur.sql → Run
+   (Zakaria + Anyssa peuvent chacun une phrase par jour.)
+
 Les phrases, notes et commentaires sont enregistrés pour Anyssa et toi (carnet).
 
 Option avancée (token sbp_…) :
   set SUPABASE_ACCESS_TOKEN=sbp_...
   node scripts/apply-schema.mjs
+  node scripts/apply-migration-auteur.mjs
