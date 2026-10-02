@@ -13,6 +13,11 @@ const AUTHORS = { zakaria: "zakaria", anyssa: "anyssa" };
 
 const DEFAULTS = [
   {
+    date: "2026-10-02",
+    author: AUTHORS.zakaria,
+    text: "T’as beau oublier où j’habite ou qui je suis, mais sache que je te rappellerai toujours à quel point je tiens à toi."
+  },
+  {
     date: "2026-09-29",
     author: AUTHORS.zakaria,
     text: "C’est sûr, c’est pas une disquette, mais je tiens à toi. J’sais pas pourquoi ni comment, mais voilà."
