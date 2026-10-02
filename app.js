@@ -179,11 +179,38 @@ async function pullCloud() {
 
     cloudOnline = true;
     localStorage.setItem(CLOUD_OK, "1");
+    reconcileLocalWithCloud();
     return true;
   } catch {
     cloudOnline = false;
     return false;
   }
+}
+
+/** Retire du local les phrases supprimées du cloud (ex. test), sans effacer une sauvegarde en cours. */
+function reconcileLocalWithCloud() {
+  if (!cloudOnline) return;
+  const cloudKeys = new Set(cloudLetters.map(letterKey));
+  const now = Date.now();
+  const graceMs = 90000;
+  const custom = readJSON(STORE_LETTERS, []);
+  if (!Array.isArray(custom)) return;
+
+  let changed = false;
+  const next = custom.filter((item) => {
+    const entry = normalizeLetter(item);
+    if (!entry) {
+      changed = true;
+      return false;
+    }
+    if (cloudKeys.has(letterKey(entry))) return true;
+    const savedAt = typeof item.savedAt === "number" ? item.savedAt : 0;
+    if (savedAt && now - savedAt < graceMs) return true;
+    changed = true;
+    return false;
+  });
+
+  if (changed) localStorage.setItem(STORE_LETTERS, JSON.stringify(next));
 }
 
 async function pushPhrase(date, text, author = AUTHORS.zakaria) {
@@ -278,9 +305,7 @@ function readJSON(key, fallback) {
 }
 
 function loadCustom() {
-  const data = readJSON(STORE_LETTERS, []);
-  if (!Array.isArray(data)) return [];
-  return data.map(normalizeLetter).filter(Boolean);
+  return loadCustomEntries().map((item) => normalizeLetter(item)).filter(Boolean);
 }
 
 function letters() {
@@ -319,12 +344,28 @@ function notes() {
   return merged;
 }
 
+function loadCustomEntries() {
+  const data = readJSON(STORE_LETTERS, []);
+  if (!Array.isArray(data)) return [];
+  return data
+    .map((item) => {
+      const entry = normalizeLetter(item);
+      if (!entry) return null;
+      return {
+        ...entry,
+        savedAt: typeof item.savedAt === "number" ? item.savedAt : 0
+      };
+    })
+    .filter(Boolean);
+}
+
 async function saveLetter(date, text, author = AUTHORS.zakaria) {
   const auteur = normalizeAuthor(author);
   const trimmed = text.trim().slice(0, 500);
-  const entry = { date, author: auteur, text: trimmed };
-  const next = loadCustom().filter((item) => letterKey(item) !== letterKey(entry));
-  next.push(entry);
+  const stored = { date, author: auteur, text: trimmed, savedAt: Date.now() };
+  const entry = normalizeLetter(stored);
+  const next = loadCustomEntries().filter((item) => letterKey(item) !== letterKey(entry));
+  next.push(stored);
   localStorage.setItem(STORE_LETTERS, JSON.stringify(next));
 
   const idx = cloudLetters.findIndex((item) => letterKey(item) === letterKey(entry));
